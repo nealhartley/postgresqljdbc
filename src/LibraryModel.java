@@ -301,6 +301,12 @@ public class LibraryModel {
      *returns: string with book details.
      */
     public String borrowBook(int isbn, int customerID, int day, int month, int year) {
+    	try {
+    	
+    	con.setAutoCommit(false); // lock the db while we alter tables.
+		con.setReadOnly(false);
+    	
+    	
     	//variables to save
     	int booksLeft = 0;
 
@@ -315,8 +321,7 @@ public class LibraryModel {
     	//check if there are any copies left.
     	String query = "SELECT b.NumLeft FROM Book b WHERE b.ISBN =" + isbn;
     	Statement stmt;
-	   	try {
-
+	   
 			stmt = con.createStatement();
 			ResultSet rs = stmt.executeQuery(query);
 
@@ -325,20 +330,15 @@ public class LibraryModel {
 				if(booksLeft<=0){return "no copies left";}
 			}
 
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
+	
 
 	   	/*
 	   	 * Now we have checked that the request is legitimate we
 	   	 * can begin inserting and altering the needed tuples.
 	   	 */
 
-	   	try {
 
-
-	   		con.setAutoCommit(false); // lock the db while we alter tables.
-			con.setReadOnly(false);
+	   	
 			//create statement
 			stmt = con.createStatement();
 			//create an update insertion string to use for updating Cust_Book.
@@ -364,22 +364,137 @@ public class LibraryModel {
     	return "Borrow Book Stub";
     }
 
+    
+    /*
+     * 1st.Need to check if book exists and customer exists. 
+     * 2nd. lock the tables
+     * 3rd. add one to the books total.
+     */
     public String returnBook(int isbn, int customerid) {
-	return "Return Book Stub";
+    	
+    	String query = "SELECT * FROM Book WHERE isbn = " + isbn;
+    	
+    	try {
+    		//check that book exists and customer exists.
+    		if(bookLookup(isbn).equals("No book. Please check your ISBN.")){ return "book does not exist";}
+    		if(showCustomer(customerid).equals("No Customer found. Check CustomerID.")){return "not a valid customer";}
+    		
+    		
+    		
+    		
+    		con.setAutoCommit(false); // lock the db while we alter tables.
+    		con.setReadOnly(false);
+    		
+    		Statement stmt = con.createStatement();
+    		ResultSet rs = stmt.executeQuery(query);
+    		
+    		if(rs.next()){
+    		
+    		int booksLeft =	rs.getInt("NumLeft");
+    		int totalBooks = rs.getInt("numofcop");
+    		
+    		if(booksLeft >= totalBooks){return "that books all there!";}
+    		
+    		//delete the entry from cust books.
+    		String deleteCustBooks = "DELETE FROM Cust_Book WHERE isbn =" +isbn + " AND customerID =" + customerid + ";";
+    		String upDateBook = "UPDATE Book SET NumLeft = " + (booksLeft + 1) + " WHERE ISBN = " + isbn + ";";
+    		
+    		
+    		stmt = con.createStatement();
+    		stmt.executeUpdate(deleteCustBooks);//delete bookloan record from the record of books on loan
+    		stmt.executeUpdate(upDateBook);//add the book total of books left in the books record.
+    		
+    		return "succesfully returned book: " + bookLookup(isbn);
+    		}
+
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    	
+    	
+    	return "Return Book Stub";
     }
 
     public void closeDBConnection() {
     }
 
     public String deleteCus(int customerID) {
-    	return "Delete Customer";
+    	
+    	if(showCustomer(customerID).equals("No Customer found. Check CustomerID.")){return "customer is non existent";}
+    	
+    	try {
+			
+    		con.setAutoCommit(false);
+			con.setReadOnly(false);
+			
+			String deleteCust = "DELETE FROM Customer WHERE customerID = " + customerID;
+			
+			Statement stmt = con.createStatement();
+			stmt = con.createStatement();
+    		stmt.executeUpdate(deleteCust);
+			
+    		return "deleted.";
+			
+    	} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} // lock the db while we alter tables.
+		
+    	
+    	
+    	return "Somehow didn't work.";
     }
 
     public String deleteAuthor(int authorID) {
-    	return "Delete Author";
+
+    	if(showAuthor(authorID).equals("No author found. Check authorID.")){return "author is non existent";}
+
+    	try {
+
+    		con.setAutoCommit(false);// lock the db while we alter tables.
+    		con.setReadOnly(false);
+
+    		String deleteAuth = "DELETE FROM author WHERE authorID = " + authorID;
+
+    		Statement stmt = con.createStatement();
+    		stmt = con.createStatement();
+    		stmt.executeUpdate(deleteAuth);
+
+    		return "deleted.";
+
+    	} catch (SQLException e) {
+    		// TODO Auto-generated catch block
+    		e.printStackTrace();
+    	} 
+
+
+    	return "Somehow didn't work.";
     }
 
     public String deleteBook(int isbn) {
-    	return "Delete Book";
+    	
+    	
+    	if(bookLookup(isbn).equals("No book. Please check your ISBN.")){return "Book is non existent";}
+
+    	try {
+
+    		con.setAutoCommit(false);// lock the db while we alter tables.
+    		con.setReadOnly(false);
+
+    		String deleteBook= "DELETE FROM book WHERE isbn = " + isbn;
+
+    		Statement stmt = con.createStatement();
+    		stmt = con.createStatement();
+    		stmt.executeUpdate(deleteBook);
+
+    		return "deleted.";
+
+    	} catch (SQLException e) {
+    		// TODO Auto-generated catch block
+    		e.printStackTrace();
+    	} 
+    	
+    	return "didn't work =(";
     }
 }
